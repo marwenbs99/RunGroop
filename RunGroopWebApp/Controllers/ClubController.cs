@@ -30,7 +30,7 @@ namespace RunGroopWebApp.Controllers
         }
 
         // GET: ClubController/Create
-        public ActionResult Create()
+        public IActionResult Create()
         {
             return View();
         }
@@ -38,16 +38,14 @@ namespace RunGroopWebApp.Controllers
         // POST: ClubController/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
+        public async Task<IActionResult> Create(Club club)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                return RedirectToAction(nameof(Index));
+                return View(club);
             }
-            catch
-            {
-                return View();
-            }
+            _clubrepository.Add(club);
+            return RedirectToAction("Index");
         }
 
         // GET: ClubController/Edit/5

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using RunGroopWebApp.Data;
 using RunGroopWebApp.Interfaces;
 using RunGroopWebApp.Models;
+using RunGroopWebApp.Repository;
 
 namespace RunGroopWebApp.Controllers
 {
@@ -34,7 +35,7 @@ namespace RunGroopWebApp.Controllers
         }
 
         // GET: RaceController/Create
-        public ActionResult Create()
+        public IActionResult Create()
         {
             return View();
         }
@@ -42,17 +43,16 @@ namespace RunGroopWebApp.Controllers
         // POST: RaceController/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
+        public async Task<IActionResult> Create(Race race)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                return RedirectToAction(nameof(Index));
+                return View(race);
             }
-            catch
-            {
-                return View();
-            }
+            _raceRepository.Add(race);
+            return RedirectToAction("Index");
         }
+
 
         // GET: RaceController/Edit/5
         public ActionResult Edit(int id)
