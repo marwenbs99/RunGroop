@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RunGroopWebApp.Data;
 using RunGroopWebApp.Interfaces;
 using RunGroopWebApp.Models;
+using RunGroopWebApp.ViewModels;
 
 namespace RunGroopWebApp.Controllers
 {
@@ -11,10 +13,12 @@ namespace RunGroopWebApp.Controllers
     {
   
         private readonly IClubRepository _clubrepository;
-        public ClubController(IClubRepository clubrepository)
+        private readonly IPhotoService _photoService;
+        public ClubController(IClubRepository clubrepository, IPhotoService photoService)
         {
             _clubrepository = clubrepository;
-           
+            _photoService = photoService;
+
         }
         public async Task<IActionResult>Index()
         {
@@ -38,14 +42,33 @@ namespace RunGroopWebApp.Controllers
         // POST: ClubController/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Club club)
+        public async Task<IActionResult> Create(CreateClubViewModel clubVM)
         {
-            if (!ModelState.IsValid)
+            if (ModelState.IsValid)
             {
-                return View(club);
+                var result = await _photoService.AddPhotoAsync(clubVM.Image);
+
+
+                var club = new Club
+                {
+                    Title = clubVM.Title,
+                    Description = clubVM.Description,
+                    Image = result.Url.ToString(),
+                    Address = new Address
+                    {
+                        Street = clubVM.Address.Street,
+                        City = clubVM.Address.City,
+                        State = clubVM.Address.State,
+                    }
+                };
+                _clubrepository.Add(club);
+                return RedirectToAction("Index");
             }
-            _clubrepository.Add(club);
-            return RedirectToAction("Index");
+            else
+            {
+                ModelState.AddModelError("","Photo Upload failed");
+            }
+           return View(clubVM);
         }
 
         // GET: ClubController/Edit/5
