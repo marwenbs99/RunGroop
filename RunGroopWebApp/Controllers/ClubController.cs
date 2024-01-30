@@ -72,23 +72,60 @@ namespace RunGroopWebApp.Controllers
         }
 
         // GET: ClubController/Edit/5
-        public ActionResult Edit(int id)
+        public async Task<IActionResult> Edit(int id)
         {
-            return View();
+            var club = await _clubrepository.GetByIdAsync(id);
+            if(club == null) return View("Error");
+            var ClubVM = new EditClubViewModel
+            {
+                Title = club.Title,
+                Description = club.Description,
+                AddressId = club.AddressId,
+                Address = club.Address,
+                URL = club.Image,
+                ClubCategory = club.ClubCategory
+            };
+            return View(ClubVM);
         }
 
         // POST: ClubController/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        public async Task<IActionResult> Edit(int id, EditClubViewModel clubVM)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                return RedirectToAction(nameof(Index));
+                ModelState.AddModelError("", "Failed to edit club");
+                return View("Error");
             }
-            catch
+            var userClub = await _clubrepository.GetByIdAsyncNoTracking(id);
+            if (userClub != null)
             {
-                return View();
+                try
+                {
+                    await _photoService.DeletePhotoAsync(userClub.Image);
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", "Could not delete photo");
+                }
+                var photoResult = await _photoService.AddPhotoAsync(clubVM.Image);
+                var club = new Club
+                {
+                    Id = id,
+                    Title = clubVM.Title,
+                    Description = clubVM.Description,
+                    Image = photoResult.Url.ToString(),
+                    AddressId = clubVM.AddressId,
+                    Address = clubVM.Address,
+                    ClubCategory = clubVM.ClubCategory,
+                };
+                _clubrepository.Update(club);
+                return RedirectToAction("Index");
+            }
+            else
+            {
+                return View(clubVM);
             }
         }
 
