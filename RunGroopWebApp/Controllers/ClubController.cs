@@ -1,33 +1,40 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RunGroopWebApp.Data;
+using RunGroopWebApp.Interfaces;
 using RunGroopWebApp.Models;
+using RunGroopWebApp.ViewModels;
 
 namespace RunGroopWebApp.Controllers
 {
     public class ClubController : Controller
     {
-        private readonly Application_DbContext _context;
-        public ClubController(Application_DbContext context)
+  
+        private readonly IClubRepository _clubrepository;
+        private readonly IPhotoService _photoService;
+        public ClubController(IClubRepository clubrepository, IPhotoService photoService)
         {
-            _context = context; 
+            _clubrepository = clubrepository;
+            _photoService = photoService;
+
         }
-        public IActionResult Index()
+        public async Task<IActionResult>Index()
         {
-            List<Club> clubs = _context.Clubs.ToList();
+            IEnumerable<Club> clubs = await _clubrepository.GetAll();
             return View(clubs);
         }
 
         // GET: ClubController/Details/id
-        public IActionResult Detail(int id)
+        public async Task<IActionResult> Detail(int id)
         {
-            Club club = _context.Clubs.Include(a => a.Address).FirstOrDefault(x => x.Id == id);
+            Club club = await _clubrepository.GetByIdAsync(id);
             return View(club);
         }
 
         // GET: ClubController/Create
-        public ActionResult Create()
+        public IActionResult Create()
         {
             return View();
         }
@@ -35,16 +42,33 @@ namespace RunGroopWebApp.Controllers
         // POST: ClubController/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
+        public async Task<IActionResult> Create(CreateClubViewModel clubVM)
         {
-            try
+            if (ModelState.IsValid)
             {
-                return RedirectToAction(nameof(Index));
+                var result = await _photoService.AddPhotoAsync(clubVM.Image);
+
+
+                var club = new Club
+                {
+                    Title = clubVM.Title,
+                    Description = clubVM.Description,
+                    Image = result.Url.ToString(),
+                    Address = new Address
+                    {
+                        Street = clubVM.Address.Street,
+                        City = clubVM.Address.City,
+                        State = clubVM.Address.State,
+                    }
+                };
+                _clubrepository.Add(club);
+                return RedirectToAction("Index");
             }
-            catch
+            else
             {
-                return View();
+                ModelState.AddModelError("","Photo Upload failed");
             }
+           return View(clubVM);
         }
 
         // GET: ClubController/Edit/5

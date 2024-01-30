@@ -2,26 +2,33 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RunGroopWebApp.Data;
+using RunGroopWebApp.Interfaces;
 using RunGroopWebApp.Models;
+using RunGroopWebApp.Repository;
+using RunGroopWebApp.Services;
+using RunGroopWebApp.ViewModels;
 
 namespace RunGroopWebApp.Controllers
 {
     public class RaceController : Controller
     {
-        private Application_DbContext _context;
-        public RaceController(Application_DbContext context)
+        
+        private readonly IRaceRepository _raceRepository;
+        private readonly IPhotoService _photoService;
+        public RaceController(IRaceRepository raceRepository, IPhotoService photoService)
         {
-            _context = context; 
+            _raceRepository = raceRepository;
+            _photoService = photoService;
         }
         // GET: RaceController
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            List<Race> races = _context.Races.ToList();
+            IEnumerable<Race> races = await _raceRepository.GetAll();
             return View(races);
         }
-        public IActionResult Detail(int id)
+        public async Task<IActionResult> Detail(int id)
         {
-            Race race = _context.Races.Include(a => a.Address).FirstOrDefault(x => x.Id == id);
+            Race race = await _raceRepository.GetByIdAsync(id);
             return View(race);
         }
         // GET: RaceController/Details/5
@@ -31,7 +38,7 @@ namespace RunGroopWebApp.Controllers
         }
 
         // GET: RaceController/Create
-        public ActionResult Create()
+        public IActionResult Create()
         {
             return View();
         }
@@ -39,17 +46,36 @@ namespace RunGroopWebApp.Controllers
         // POST: RaceController/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
+        public async Task<IActionResult> Create(CreateRaceViewModel raceVM)
         {
-            try
+            if (ModelState.IsValid)
             {
-                return RedirectToAction(nameof(Index));
+                var result = await _photoService.AddPhotoAsync(raceVM.Image);
+
+
+                var race = new Race
+                {
+                    Title = raceVM.Title,
+                    Description = raceVM.Description,
+                    Image = result.Url.ToString(),
+                    Address = new Address
+                    {
+                        Street = raceVM.Address.Street,
+                        City = raceVM.Address.City,
+                        State = raceVM.Address.State,
+                    }
+                };
+                _raceRepository.Add(race);
+                return RedirectToAction("Index");
             }
-            catch
+            else
             {
-                return View();
+                ModelState.AddModelError("", "Photo Upload failed");
             }
+
+            return View(raceVM);
         }
+
 
         // GET: RaceController/Edit/5
         public ActionResult Edit(int id)
