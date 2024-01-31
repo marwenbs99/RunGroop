@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RunGroopWebApp.Models;
-
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 namespace RunGroopWebApp.Data
 {
-    public class Application_DbContext: DbContext
+    public class Application_DbContext: IdentityDbContext<AppUser>
     {
         public Application_DbContext(DbContextOptions<Application_DbContext>options) : base(options) { 
         
